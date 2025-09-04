@@ -61,6 +61,11 @@ class UnoGame {
     }
 
     playCard(playerIndex, cardIndex) {
+        // Ensure it's the correct player's turn
+        if (playerIndex !== this.currentPlayer) {
+            return false;
+        }
+        
         const player = this.players[playerIndex];
         const card = player.hand[cardIndex];
         const topCard = this.getTopCard();
@@ -136,6 +141,7 @@ class UnoGame {
 
     showColorPicker() {
         if (this.currentPlayer === 0) {
+            // Only show color picker if it's actually the human player's turn
             document.getElementById('colorPicker').style.display = 'block';
             document.getElementById('overlay').style.display = 'block';
         } else {
@@ -147,14 +153,25 @@ class UnoGame {
 
     selectWildColor(color) {
         this.currentColor = color;
-        document.getElementById('colorPicker').style.display = 'none';
-        document.getElementById('overlay').style.display = 'none';
+        
+        // Only hide color picker if it was shown to human player
+        if (this.currentPlayer === 0) {
+            document.getElementById('colorPicker').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
         
         if (this.pendingDraws > 0) {
             this.nextTurn();
             this.forceDraw();
         } else {
             this.nextTurn();
+        }
+        
+        // Schedule AI turn if needed
+        if (!this.players[this.currentPlayer].isHuman && this.gameStarted) {
+            setTimeout(() => {
+                this.playAITurn();
+            }, 1000);
         }
         
         this.render();
@@ -171,6 +188,11 @@ class UnoGame {
     }
 
     drawCard(playerIndex) {
+        // Ensure it's the correct player's turn
+        if (playerIndex !== this.currentPlayer) {
+            return;
+        }
+        
         const card = this.deck.draw();
         if (card) {
             this.players[playerIndex].hand.push(card);
@@ -181,6 +203,13 @@ class UnoGame {
                 const topCard = this.getTopCard();
                 if (!card.canPlayOn(topCard, this.currentColor)) {
                     this.nextTurn();
+                    
+                    // Schedule AI turn if needed
+                    if (!this.players[this.currentPlayer].isHuman) {
+                        setTimeout(() => {
+                            this.playAITurn();
+                        }, 1000);
+                    }
                 }
             }
         }
