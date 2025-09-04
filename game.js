@@ -198,13 +198,26 @@ class UnoGame {
     playAITurn() {
         const player = this.players[this.currentPlayer];
         const topCard = this.getTopCard();
+        
+        if (!topCard) {
+            // If no top card, draw a card instead
+            this.drawCard(this.currentPlayer);
+            return;
+        }
+        
         const playableCards = player.hand.map((card, index) => ({ card, index }))
             .filter(item => item.card.canPlayOn(topCard, this.currentColor));
 
         if (playableCards.length > 0) {
             const chosenCard = this.ai.chooseCard(playableCards.map(item => item.card), topCard, this.currentColor);
-            const cardIndex = playableCards.find(item => item.card === chosenCard).index;
-            this.playCard(this.currentPlayer, cardIndex);
+            const matchingCard = playableCards.find(item => item.card === chosenCard);
+            
+            if (matchingCard) {
+                this.playCard(this.currentPlayer, matchingCard.index);
+            } else {
+                // Fallback: play first available card
+                this.playCard(this.currentPlayer, playableCards[0].index);
+            }
         } else {
             this.drawCard(this.currentPlayer);
         }
@@ -309,4 +322,3 @@ class UnoGame {
 document.addEventListener('DOMContentLoaded', () => {
     new UnoGame();
 });
-
