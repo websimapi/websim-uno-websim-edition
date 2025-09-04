@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNO WebSim Edition</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>UNO</h1>
+            <div class="game-info">
+                <div class="deck-count">Cards: <span id="deckCount">108</span></div>
+                <div class="current-player">Turn: <span id="currentPlayer">You</span></div>
+            </div>
+        </div>
+
+        <div class="opponents">
+            <div class="opponent" id="opponent1">
+                <div class="opponent-name">AI Player 1</div>
+                <div class="opponent-cards">
+                    <div class="card-count">7 cards</div>
+                    <div class="card-back-stack"></div>
+                </div>
+            </div>
+            <div class="opponent" id="opponent2">
+                <div class="opponent-name">AI Player 2</div>
+                <div class="opponent-cards">
+                    <div class="card-count">7 cards</div>
+                    <div class="card-back-stack"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-center">
+            <div class="deck-area">
+                <div class="draw-pile" id="drawPile">
+                    <div class="card card-back"></div>
+                </div>
+                <div class="discard-pile" id="discardPile">
+                    <div class="card" id="topCard"></div>
+                </div>
+            </div>
+            <div class="game-actions">
+                <button id="drawButton" class="action-btn">Draw Card</button>
+                <button id="unoButton" class="action-btn uno-btn" disabled>UNO!</button>
+            </div>
+        </div>
+
+        <div class="player-hand" id="playerHand">
+            <!-- Player cards will be dynamically added here -->
+        </div>
+    </div>
+
+    <div class="color-picker" id="colorPicker" style="display: none;">
+        <h3>Choose a color:</h3>
+        <div class="color-options">
+            <button class="color-btn red" data-color="red"></button>
+            <button class="color-btn yellow" data-color="yellow"></button>
+            <button class="color-btn green" data-color="green"></button>
+            <button class="color-btn blue" data-color="blue"></button>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay" style="display: none;"></div>
+
+    <script type="module" src="game.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
+
