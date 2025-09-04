@@ -44,7 +44,7 @@ class UnoGame {
     setupEventListeners() {
         document.getElementById('drawButton').addEventListener('click', () => {
             if (this.currentPlayer === 0) {
-                this.drawCard(0);
+                this.drawCardForPlayer();
             }
         });
 
@@ -55,6 +55,7 @@ class UnoGame {
         // Color picker events
         document.querySelectorAll('.color-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
+                if (this.currentPlayer !== 0) return; // Prevent clicking when not player's turn
                 this.selectWildColor(e.target.dataset.color);
             });
         });
@@ -80,12 +81,10 @@ class UnoGame {
         // Add to discard pile
         this.discardPile.push(card);
 
-        // Handle special cards
-        this.handleSpecialCard(card);
-
-        // Check for win
+        // Check for win first
         if (player.hand.length === 0) {
-            this.endGame(playerIndex);
+            this.render();
+            setTimeout(() => this.endGame(playerIndex), 100);
             return true;
         }
 
@@ -94,16 +93,22 @@ class UnoGame {
             this.enableUnoButton();
         }
 
+        // Handle special cards
+        this.handleSpecialCard(card, playerIndex);
+        
         this.render();
         return true;
     }
 
-    handleSpecialCard(card) {
+    handleSpecialCard(card, playerIndex) {
+        let turnAdvanced = false;
+
         switch (card.value) {
             case 'skip':
                 this.currentColor = card.color;
-                this.nextTurn();
-                this.nextTurn(); // Skip next player
+                this.nextTurn(); // This sets up the skipped player
+                this.nextTurn(); // This moves to the player after the skipped one
+                turnAdvanced = true;
                 break;
             case 'reverse':
                 this.currentColor = card.color;
@@ -112,35 +117,35 @@ class UnoGame {
                     this.nextTurn(); // In 2-player game, reverse acts like skip
                 }
                 this.nextTurn();
+                turnAdvanced = true;
                 break;
             case 'draw2':
                 this.currentColor = card.color;
                 this.pendingDraws += 2;
                 this.nextTurn();
-                this.forceDraw();
+                this.forceDraw(); // forceDraw will advance the turn again
+                turnAdvanced = true;
                 break;
             case 'wild':
-                this.showColorPicker();
-                return; // Don't advance turn yet
+                this.showColorPicker(playerIndex);
+                // Turn is advanced in selectWildColor
+                return;
             case 'wildDraw4':
                 this.pendingDraws += 4;
-                this.showColorPicker();
-                return; // Don't advance turn yet
+                this.showColorPicker(playerIndex);
+                // Turn is advanced in selectWildColor
+                return;
             default:
                 this.currentColor = card.color;
                 this.nextTurn();
+                turnAdvanced = true;
         }
         
-        // Schedule next AI turn if needed
-        if (!this.players[this.currentPlayer].isHuman && this.gameStarted) {
-            setTimeout(() => {
-                this.playAITurn();
-            }, 1000);
-        }
+        // This was the old location, now it's handled within nextTurn/selectWildColor
     }
 
-    showColorPicker() {
-        if (this.currentPlayer === 0) {
+    showColorPicker(playerIndex) {
+        if (playerIndex === 0) {
             // Only show color picker if it's actually the human player's turn
             document.getElementById('colorPicker').style.display = 'block';
             document.getElementById('overlay').style.display = 'block';
@@ -154,24 +159,17 @@ class UnoGame {
     selectWildColor(color) {
         this.currentColor = color;
         
-        // Only hide color picker if it was shown to human player
-        if (this.currentPlayer === 0) {
-            document.getElementById('colorPicker').style.display = 'none';
-            document.getElementById('overlay').style.display = 'none';
-        }
+        // Hide color picker for human player
+        document.getElementById('colorPicker').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
         
-        if (this.pendingDraws > 0) {
+        const cardJustPlayed = this.getTopCard();
+        
+        if (cardJustPlayed.value === 'wildDraw4') {
             this.nextTurn();
             this.forceDraw();
-        } else {
+        } else { // It was a regular wild
             this.nextTurn();
-        }
-        
-        // Schedule AI turn if needed
-        if (!this.players[this.currentPlayer].isHuman && this.gameStarted) {
-            setTimeout(() => {
-                this.playAITurn();
-            }, 1000);
         }
         
         this.render();
@@ -187,8 +185,9 @@ class UnoGame {
         this.nextTurn();
     }
 
-    drawCard(playerIndex) {
-        // Ensure it's the correct player's turn
+    drawCardForPlayer() {
+        // Renamed from drawCard to avoid confusion. This is for the button click.
+        const playerIndex = 0; // Only for human player
         if (playerIndex !== this.currentPlayer) {
             return;
         }
@@ -196,35 +195,36 @@ class UnoGame {
         const card = this.deck.draw();
         if (card) {
             this.players[playerIndex].hand.push(card);
-            this.render();
             
-            // If it's the human player and they can't play the card, end turn
-            if (playerIndex === 0) {
-                const topCard = this.getTopCard();
-                if (!card.canPlayOn(topCard, this.currentColor)) {
-                    this.nextTurn();
-                    
-                    // Schedule AI turn if needed
-                    if (!this.players[this.currentPlayer].isHuman) {
-                        setTimeout(() => {
-                            this.playAITurn();
-                        }, 1000);
-                    }
-                }
-            }
+            const topCard = this.getTopCard();
+            // If the drawn card is not playable, or if they choose not to play it, end turn.
+            // For simplicity, we will end the turn automatically after drawing.
+            // A more complex implementation could allow playing the drawn card.
+            this.nextTurn();
         }
+        this.render();
+    }
+
+    drawCardForAI(playerIndex) {
+        // Separate draw function for AI to avoid turn logic conflicts
+        if (playerIndex !== this.currentPlayer) return;
+
+        const card = this.deck.draw();
+        if (card) {
+            this.players[playerIndex].hand.push(card);
+        }
+        // AI turn ends after drawing
+        this.nextTurn();
+        this.render();
     }
 
     nextTurn() {
-        do {
-            this.currentPlayer = (this.currentPlayer + this.direction + this.players.length) % this.players.length;
-        } while (this.players.length === 0);
-        
+        this.currentPlayer = (this.currentPlayer + this.direction + this.players.length) % this.players.length;
         this.disableUnoButton();
         this.render();
         
         // Handle AI turn
-        if (!this.players[this.currentPlayer].isHuman) {
+        if (!this.players[this.currentPlayer].isHuman && this.gameStarted) {
             setTimeout(() => {
                 this.playAITurn();
             }, 1000);
@@ -232,30 +232,42 @@ class UnoGame {
     }
 
     playAITurn() {
+        if (!this.players[this.currentPlayer].isHuman === false) return; // Safety check
+
         const player = this.players[this.currentPlayer];
         const topCard = this.getTopCard();
         
         if (!topCard || !player) {
-            console.error('Invalid game state in AI turn');
+            console.error('Invalid game state in AI turn, skipping turn.');
             this.nextTurn();
             return;
         }
         
-        const playableCards = player.hand.map((card, index) => ({ card, index }))
+        const playableCards = player.hand
+            .map((card, index) => ({ card, index }))
             .filter(item => item.card && item.card.canPlayOn(topCard, this.currentColor));
 
         if (playableCards.length > 0) {
-            const chosenCard = this.ai.chooseCard(playableCards.map(item => item.card), topCard, this.currentColor);
-            const matchingCard = playableCards.find(item => item.card === chosenCard);
+            const chosenCardObject = this.ai.chooseCard(playableCards.map(item => item.card), topCard, this.currentColor);
             
-            if (matchingCard) {
-                this.playCard(this.currentPlayer, matchingCard.index);
+            // Find the original index of the chosen card in the AI's hand
+            const originalIndex = player.hand.findIndex(cardInHand => cardInHand === chosenCardObject);
+
+            if (originalIndex !== -1) {
+                // Verify the chosen card is still playable before playing
+                const cardToPlay = player.hand[originalIndex];
+                if (cardToPlay.canPlayOn(this.getTopCard(), this.currentColor)) {
+                    this.playCard(this.currentPlayer, originalIndex);
+                } else {
+                     // If chosen card is no longer valid (e.g. color changed), play the first available valid card.
+                    this.playCard(this.currentPlayer, playableCards[0].index);
+                }
             } else {
-                // Fallback: play first available card
+                // Fallback: play first available card if something went wrong with choice logic
                 this.playCard(this.currentPlayer, playableCards[0].index);
             }
         } else {
-            this.drawCard(this.currentPlayer);
+            this.drawCardForAI(this.currentPlayer);
         }
     }
 
@@ -277,6 +289,7 @@ class UnoGame {
     }
 
     endGame(winnerIndex) {
+        this.gameStarted = false; // Stop AI turns
         alert(`${this.players[winnerIndex].name} wins!`);
         // Reset game
         location.reload();
@@ -288,6 +301,7 @@ class UnoGame {
         this.renderTopCard();
         this.renderPlayerHand();
         this.renderOpponents();
+        this.updateActionButtons();
     }
 
     renderDeckCount() {
@@ -345,12 +359,18 @@ class UnoGame {
     renderOpponents() {
         this.players.slice(1).forEach((player, index) => {
             const opponentElement = document.getElementById(`opponent${index + 1}`);
+            if (!opponentElement) return;
             const cardCountElement = opponentElement.querySelector('.card-count');
             cardCountElement.textContent = `${player.hand.length} cards`;
             
             // Highlight current player
             opponentElement.classList.toggle('current-turn', this.currentPlayer === index + 1);
         });
+    }
+
+    updateActionButtons() {
+        const isPlayerTurn = this.currentPlayer === 0;
+        document.getElementById('drawButton').disabled = !isPlayerTurn;
     }
 }
 
