@@ -125,6 +125,13 @@ class UnoGame {
                 this.currentColor = card.color;
                 this.nextTurn();
         }
+        
+        // Schedule next AI turn if needed
+        if (!this.players[this.currentPlayer].isHuman && this.gameStarted) {
+            setTimeout(() => {
+                this.playAITurn();
+            }, 1000);
+        }
     }
 
     showColorPicker() {
@@ -199,14 +206,14 @@ class UnoGame {
         const player = this.players[this.currentPlayer];
         const topCard = this.getTopCard();
         
-        if (!topCard) {
-            // If no top card, draw a card instead
-            this.drawCard(this.currentPlayer);
+        if (!topCard || !player) {
+            console.error('Invalid game state in AI turn');
+            this.nextTurn();
             return;
         }
         
         const playableCards = player.hand.map((card, index) => ({ card, index }))
-            .filter(item => item.card.canPlayOn(topCard, this.currentColor));
+            .filter(item => item.card && item.card.canPlayOn(topCard, this.currentColor));
 
         if (playableCards.length > 0) {
             const chosenCard = this.ai.chooseCard(playableCards.map(item => item.card), topCard, this.currentColor);
